@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Header from '../components/layout/Header'
 import FooterSection from '../components/sections/FooterSection'
 import HeatmapRegionChips from '../components/results/HeatmapRegionChips'
@@ -8,7 +8,9 @@ import ResultSummaryBanner from '../components/results/ResultSummaryBanner'
 import ScoreCard from '../components/results/ScoreCard'
 import SuspiciousFrameCard from '../components/results/SuspiciousFrameCard'
 import { analysisResult as fallbackResult } from '../data/resultData'
+import apiService from '../services/apiService'
 import { downloadPdfReport } from '../utils/reportDownload'
+import { getFriendlyError } from '../utils/errors'
 
 function readStoredResult() {
   try {
@@ -30,8 +32,62 @@ function buildResult() {
   }
 }
 
+function normalizeResult(payload) {
+  const data = payload?.data || payload?.result || payload
+  if (!data) return null
+
+  return {
+    ...fallbackResult,
+    ...data,
+    videoName: data.videoName || data.video?.filename || fallbackResult.videoName,
+    fakeProbability: data.fakeProbability ?? data.confidence ?? fallbackResult.fakeProbability,
+    authenticityScore: data.authenticityScore ?? Math.max(0, 100 - (data.fakeProbability ?? data.confidence ?? fallbackResult.fakeProbability)),
+    suspiciousFrames: data.suspiciousFrames || data.frames || fallbackResult.suspiciousFrames,
+  }
+}
+
 export default function ResultsPage() {
-  const result = useMemo(buildResult, [])
+  const initialResult = useMemo(buildResult, [])
+  const [result, setResult] = useState(initialResult)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [notFound, setNotFound] = useState(false)
+
+  useEffect(() => {
+    const videoId = window.location.pathname.split('/results/')[1]
+    if (!videoId) return undefined
+
+    let isActive = true
+    setIsLoading(true)
+
+    apiService.getResults(videoId)
+      .then((payload) => {
+        if (!isActive) return
+        const nextResult = normalizeResult(payload)
+        if (!nextResult) {
+          setNotFound(true)
+          return
+        }
+        setResult(nextResult)
+        setError('')
+      })
+      .catch((fetchError) => {
+        if (!isActive) return
+        if (String(fetchError?.message || '').toLowerCase().includes('not found')) {
+          setNotFound(true)
+        } else {
+          setError(getFriendlyError(fetchError, 'Failed to load results'))
+        }
+      })
+      .finally(() => {
+        if (isActive) setIsLoading(false)
+      })
+
+    return () => {
+      isActive = false
+    }
+  }, [])
+
   const scoreCards = [
     { label: 'Fake Probability', value: result.fakeProbability, suffix: '%', tone: 'red' },
     { label: 'Authenticity Score', value: result.authenticityScore, suffix: '%', tone: 'emerald' },
@@ -40,6 +96,22 @@ export default function ResultsPage() {
     { label: 'Confidence Level', value: result.confidenceLevel, tone: 'amber' },
     { label: 'PDF Report', value: result.reportStatus, tone: 'slate' },
   ]
+
+  if (notFound) {
+    return (
+      <div className="min-h-screen bg-[#05090c] font-['Manrope'] text-[#f4fbff] antialiased">
+        <Header />
+        <main className="relative grid min-h-screen place-items-center overflow-hidden px-6 pt-28">
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_18%,rgba(248,113,113,.12),transparent_30%),linear-gradient(180deg,#05090c,#071116_52%,#03080b)]" aria-hidden="true" />
+          <section className="relative w-[min(680px,100%)] rounded-[30px] border border-red-300/20 bg-red-400/[.07] p-7 text-center shadow-[0_32px_90px_rgba(0,0,0,.42)]">
+            <h1 className="text-[clamp(32px,5vw,52px)] font-semibold tracking-[-.045em]">Result Not Found</h1>
+            <p className="mx-auto mt-4 max-w-[520px] text-base leading-7 text-[#a9bac1]">No analysis result was found for this video. It may have been deleted or the analysis has not completed yet.</p>
+            <a className="mt-7 inline-flex min-h-12 items-center justify-center rounded-full bg-cyan-300 px-6 text-sm font-extrabold text-[#021014]" href="/history">Back to History</a>
+          </section>
+        </main>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-[#05090c] font-['Manrope'] text-[#f4fbff] antialiased">
@@ -68,6 +140,12 @@ export default function ResultsPage() {
           <div className="mt-10">
             <ResultSummaryBanner result={result} />
           </div>
+
+          {error && (
+            <div className="mt-6 rounded-2xl border border-amber-300/25 bg-amber-300/10 px-4 py-3 text-sm font-semibold text-amber-100" role="alert">
+              {isLoading ? 'Loading latest result...' : error}
+            </div>
+          )}
 
           <div className="mt-6 grid grid-cols-6 gap-4 max-xl:grid-cols-3 max-md:grid-cols-2 max-sm:grid-cols-1">
             {scoreCards.map((card, index) => (

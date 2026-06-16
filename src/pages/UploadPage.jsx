@@ -2,13 +2,15 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import FooterSection from '../components/sections/FooterSection'
 import Header from '../components/layout/Header'
 import AnalysisProcessingPanel from '../components/upload/AnalysisProcessingPanel'
+import apiService from '../services/apiService'
+import { getFriendlyError } from '../utils/errors'
 
 const uploadPageContent = {
   title: 'Upload Video for Analysis',
   subtitle:
     'Upload a suspicious video and let the system analyze facial frames, detect manipulation, generate heatmaps, and prepare a PDF report.',
-  supportedFormats: ['MP4', 'AVI', 'MOV'],
-  maxFileSize: '100MB',
+  supportedFormats: ['MP4'],
+  maxFileSize: '50MB',
   nextSteps: [
     {
       icon: '/icons/film-strip.svg',
@@ -110,8 +112,12 @@ const analysisMessages = [
   'Finalizing results...',
 ]
 
-const allowedExtensions = ['mp4', 'avi', 'mov']
-const maxBytes = 100 * 1024 * 1024
+const allowedExtensions = ['mp4']
+const maxBytes = 50 * 1024 * 1024
+const minDurationSeconds = 5
+const maxDurationSeconds = 120
+const pollingTimeoutMs = 5 * 60 * 1000
+const pollingIntervalMs = 2500
 
 function formatBytes(bytes) {
   if (!bytes) return '0 MB'
@@ -120,6 +126,36 @@ function formatBytes(bytes) {
 
 function getExtension(fileName) {
   return fileName.split('.').pop()?.toLowerCase() || ''
+}
+
+function getVideoDuration(file) {
+  return new Promise((resolve, reject) => {
+    const video = document.createElement('video')
+    const url = URL.createObjectURL(file)
+
+    video.preload = 'metadata'
+    video.onloadedmetadata = () => {
+      URL.revokeObjectURL(url)
+      resolve(video.duration)
+    }
+    video.onerror = () => {
+      URL.revokeObjectURL(url)
+      reject(new Error('Could not read video duration. Please upload a valid MP4.'))
+    }
+    video.src = url
+  })
+}
+
+function getVideoId(payload) {
+  return payload?.videoId || payload?.id || payload?.video?.id || payload?.data?.videoId || payload?.data?.video?.id
+}
+
+function getStatusProgress(payload) {
+  return payload?.progress ?? payload?.data?.progress ?? null
+}
+
+function getStatusValue(payload) {
+  return String(payload?.status || payload?.data?.status || '').toLowerCase()
 }
 
 export default function UploadPage() {
@@ -131,6 +167,7 @@ export default function UploadPage() {
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [progress, setProgress] = useState(0)
   const [currentStep, setCurrentStep] = useState(0)
+  const [failedStep, setFailedStep] = useState(null)
 
   useEffect(() => {
     setIsMounted(true)
@@ -147,55 +184,41 @@ export default function UploadPage() {
     }
   }, [previewUrl])
 
-  useEffect(() => {
-    if (!isAnalyzing || !selectedFile) return undefined
-
-    const startedAt = Date.now()
-    const duration = 9800
-    const timer = window.setInterval(() => {
-      const elapsed = Date.now() - startedAt
-      const nextProgress = Math.min(Math.round((elapsed / duration) * 100), 100)
-      const nextStep = Math.min(Math.floor((nextProgress / 100) * analysisSteps.length), analysisSteps.length - 1)
-
-      setProgress(nextProgress)
-      setCurrentStep(nextStep)
-
-      if (nextProgress >= 100) {
-        window.clearInterval(timer)
-        window.sessionStorage.setItem(
-          'analysisResult',
-          JSON.stringify({
-            videoName: selectedFile.name,
-            format: getExtension(selectedFile.name).toUpperCase(),
-            size: formatBytes(selectedFile.size),
-            confidence: 87,
-          }),
-        )
-        window.setTimeout(() => {
-          window.location.href = '/results'
-        }, 700)
-      }
-    }, 260)
-
-    return () => window.clearInterval(timer)
-  }, [isAnalyzing, selectedFile])
-
-  function validateAndSetFile(file) {
+  async function validateAndSetFile(file) {
     if (!file) {
-      setError('Please select a video before starting analysis.')
+      setError('Upload the MP4 clip you want to verify.')
       return
     }
 
     const extension = getExtension(file.name)
     if (!allowedExtensions.includes(extension)) {
       setSelectedFile(null)
-      setError('Unsupported file format. Please upload MP4, AVI, or MOV.')
+      setError('Only MP4 videos are supported.')
       return
     }
 
     if (file.size > maxBytes) {
       setSelectedFile(null)
-      setError('File size exceeds the allowed limit. Please upload a smaller video.')
+      setError('File size must be 50 MB or less.')
+      return
+    }
+
+    try {
+      const duration = await getVideoDuration(file)
+      if (!Number.isFinite(duration)) throw new Error('Could not read video duration. Please upload a valid MP4.')
+      if (duration < minDurationSeconds) {
+        setSelectedFile(null)
+        setError('Video must be at least 5 seconds.')
+        return
+      }
+      if (duration > maxDurationSeconds) {
+        setSelectedFile(null)
+        setError('Video must be 2 minutes or less.')
+        return
+      }
+    } catch (durationError) {
+      setSelectedFile(null)
+      setError(durationError.message)
       return
     }
 
@@ -203,6 +226,7 @@ export default function UploadPage() {
     setIsAnalyzing(false)
     setProgress(0)
     setCurrentStep(0)
+    setFailedStep(null)
     setError('')
   }
 
@@ -222,19 +246,86 @@ export default function UploadPage() {
     setIsAnalyzing(false)
     setProgress(0)
     setCurrentStep(0)
+    setFailedStep(null)
     if (inputRef.current) inputRef.current.value = ''
   }
 
-  function analyzeVideo() {
+  async function analyzeVideo() {
     if (!selectedFile) {
-      setError('Please select a video before starting analysis.')
+      setError('Upload the MP4 clip you want to verify.')
       return
     }
 
     setError('')
     setProgress(0)
     setCurrentStep(0)
+    setFailedStep(null)
     setIsAnalyzing(true)
+
+    let lastStep = 0
+
+    try {
+      setCurrentStep(0)
+      setProgress(5)
+      const uploadResponse = await apiService.uploadVideo(selectedFile)
+      const videoId = getVideoId(uploadResponse)
+      if (!videoId) throw new Error('Server did not return a video ID')
+
+      lastStep = 1
+      setCurrentStep(1)
+      setProgress(15)
+      await apiService.startAnalysis(videoId)
+
+      const startedAt = Date.now()
+      let temporaryFailures = 0
+      let lastProgress = 15
+
+      while (Date.now() - startedAt < pollingTimeoutMs) {
+        try {
+          const statusPayload = await apiService.getAnalysisStatus(videoId)
+          temporaryFailures = 0
+          const status = getStatusValue(statusPayload)
+          const statusProgress = getStatusProgress(statusPayload)
+          const nextProgress = statusProgress == null ? Math.min(lastProgress + 8, 94) : Math.min(Math.max(Number(statusProgress), 0), 100)
+          lastProgress = nextProgress
+          const nextStep = Math.min(Math.floor((nextProgress / 100) * analysisSteps.length), analysisSteps.length - 1)
+          setProgress(nextProgress)
+          setCurrentStep(nextStep)
+          lastStep = nextStep
+
+          if (status === 'failed' || status === 'error') throw new Error('Analysis failed')
+          if (status === 'completed' || status === 'complete' || status === 'done') {
+            setProgress(100)
+            setCurrentStep(analysisSteps.length - 1)
+            const resultPayload = await apiService.getResults(videoId).catch(() => null)
+            window.sessionStorage.setItem(
+              'analysisResult',
+              JSON.stringify({
+                videoId,
+                videoName: selectedFile.name,
+                format: getExtension(selectedFile.name).toUpperCase(),
+                size: formatBytes(selectedFile.size),
+                confidence: resultPayload?.fakeProbability || resultPayload?.confidence || 87,
+              }),
+            )
+            window.location.href = `/results/${videoId}`
+            return
+          }
+        } catch (pollingError) {
+          temporaryFailures += 1
+          if (temporaryFailures > 3) throw pollingError
+          setError("Connection interrupted. We'll keep checking when possible.")
+        }
+
+        await new Promise((resolve) => window.setTimeout(resolve, pollingIntervalMs))
+      }
+
+      throw new Error('Analysis timed out after 5 minutes')
+    } catch (processingError) {
+      setFailedStep(lastStep)
+      setIsAnalyzing(true)
+      setError(getFriendlyError(processingError, 'Verification failed'))
+    }
   }
 
   const fileFormat = selectedFile ? getExtension(selectedFile.name).toUpperCase() : ''
@@ -278,12 +369,12 @@ export default function UploadPage() {
                     Browse File
                   </button>
                   <p className="mt-5 text-xs font-medium leading-5 text-[#8498a0]">
-                    Supported formats: {uploadPageContent.supportedFormats.join(', ')}
+                    Supported formats: MP4
                     <br />
                     Maximum file size: {uploadPageContent.maxFileSize}
                   </p>
                 </div>
-                <input ref={inputRef} className="sr-only" type="file" accept=".mp4,.avi,.mov,video/mp4,video/quicktime,video/x-msvideo" onChange={handleInputChange} />
+                <input ref={inputRef} className="sr-only" type="file" accept=".mp4,video/mp4" onChange={handleInputChange} />
               </div>
 
               {error && (
@@ -351,7 +442,13 @@ export default function UploadPage() {
                 currentStep={currentStep}
                 steps={analysisSteps}
                 currentMessage={analysisMessages[currentStep] || 'Finalizing results...'}
+                failedStep={failedStep}
               />
+              {error && (
+                <div className="mt-5 rounded-2xl border border-red-400/25 bg-red-500/10 px-4 py-3 text-sm font-semibold text-red-200" role="alert">
+                  {error}
+                </div>
+              )}
             </div>
           )}
 

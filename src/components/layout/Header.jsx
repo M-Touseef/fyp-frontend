@@ -1,13 +1,42 @@
-import { useState } from 'react'
-const navItems = [
+import { useEffect, useState } from 'react'
+import { useAuth } from '../auth/AuthContext'
+import { isAdminUser } from '../../utils/auth'
+
+const loggedOutNavItems = [
   { label: 'Home', href: '/' },
-  { label: 'Upload Video', href: '/upload' },
-  { label: 'Previous Videos', href: '/previous-videos' },
-  { label: 'About', href: '/about' },
+  { label: 'Sign In', href: '/signin' },
+  { label: 'Register', href: '/register' },
+]
+
+const loggedInNavItems = [
+  { label: 'Home', href: '/' },
+  { label: 'Upload', href: '/upload' },
+  { label: 'History', href: '/history' },
+  { label: 'Methodology', href: '/#detection-flow' },
+]
+
+const adminNavItems = [
+  { label: 'Dashboard', href: '/admin' },
 ]
 
 export default function Header() {
   const [isOpen, setIsOpen] = useState(false)
+  const { logout: logoutUser, user } = useAuth()
+  const navItems = user ? (isAdminUser(user) ? adminNavItems : loggedInNavItems) : loggedOutNavItems
+
+  useEffect(() => {
+    const closeMenu = () => setIsOpen(false)
+    window.addEventListener('auth-change', closeMenu)
+    return () => {
+      window.removeEventListener('auth-change', closeMenu)
+    }
+  }, [])
+
+  function logout() {
+    logoutUser()
+    setIsOpen(false)
+    window.location.href = '/'
+  }
 
   return (
     <header className="fixed inset-x-0 top-0 z-[100] border-b border-white/10 bg-[#05090c]/75 text-[#f4fbff] shadow-[0_18px_45px_rgba(0,0,0,.22)] backdrop-blur-2xl">
@@ -37,9 +66,15 @@ export default function Header() {
             <span className="size-1.5 rounded-full bg-emerald-300 shadow-[0_0_12px_rgba(110,231,183,.85)]" />
             Engine Online
           </span>
-          <a className="inline-flex min-h-11 items-center justify-center rounded-full bg-cyan-300 px-5 text-sm font-extrabold text-[#021014] shadow-[0_14px_34px_rgba(34,211,238,.18)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-cyan-200 hover:shadow-[0_18px_42px_rgba(34,211,238,.28)]" href="/upload">
-            Start Detection
-          </a>
+          {user ? (
+            <button className="inline-flex min-h-11 items-center justify-center rounded-full bg-cyan-300 px-5 text-sm font-extrabold text-[#021014] shadow-[0_14px_34px_rgba(34,211,238,.18)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-cyan-200 hover:shadow-[0_18px_42px_rgba(34,211,238,.28)]" type="button" onClick={logout}>
+              Logout
+            </button>
+          ) : (
+            <a className="inline-flex min-h-11 items-center justify-center rounded-full bg-cyan-300 px-5 text-sm font-extrabold text-[#021014] shadow-[0_14px_34px_rgba(34,211,238,.18)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-cyan-200 hover:shadow-[0_18px_42px_rgba(34,211,238,.28)]" href="/signin">
+              Secure Login
+            </a>
+          )}
         </div>
 
         <button
@@ -70,9 +105,15 @@ export default function Header() {
               <span className="text-cyan-300/70">&#8594;</span>
             </a>
           ))}
-          <a className="mt-2 flex min-h-12 items-center justify-center rounded-2xl bg-cyan-300 px-5 text-sm font-extrabold text-[#021014]" href="/upload" onClick={() => setIsOpen(false)}>
-            Start Detection
-          </a>
+          {user ? (
+            <button className="mt-2 flex min-h-12 w-full items-center justify-center rounded-2xl bg-cyan-300 px-5 text-sm font-extrabold text-[#021014]" type="button" onClick={logout}>
+              Logout
+            </button>
+          ) : (
+            <a className="mt-2 flex min-h-12 items-center justify-center rounded-2xl bg-cyan-300 px-5 text-sm font-extrabold text-[#021014]" href="/signin" onClick={() => setIsOpen(false)}>
+              Secure Login
+            </a>
+          )}
         </nav>
       </div>
     </header>
