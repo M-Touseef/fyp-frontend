@@ -1,9 +1,7 @@
 import { useState } from 'react'
-import { ScanIcon } from '../shared/Icons'
-
 const navItems = [
   { label: 'Home', href: '/' },
-  { label: 'Upload Video', href: '/upload-video' },
+  { label: 'Upload Video', href: '/upload' },
   { label: 'Previous Videos', href: '/previous-videos' },
   { label: 'About', href: '/about' },
 ]
@@ -16,9 +14,9 @@ export default function Header() {
       <div className="absolute inset-x-0 bottom-0 h-px bg-[linear-gradient(90deg,transparent,rgba(34,211,238,.55),transparent)]" aria-hidden="true" />
       <div className="mx-auto flex h-[82px] w-[min(1240px,calc(100%-48px))] items-center justify-between gap-6 max-md:h-[72px] max-md:w-[min(680px,calc(100%-30px))]">
         <a className="group flex min-w-0 items-center gap-3" href="/" aria-label="Deepfake Detection System home">
-          <span className="relative grid size-11 shrink-0 place-items-center rounded-2xl border border-cyan-300/35 bg-cyan-300/10 text-cyan-200 shadow-[inset_0_0_22px_rgba(34,211,238,.12),0_0_26px_rgba(34,211,238,.08)] transition-all duration-300 group-hover:border-cyan-200/70 group-hover:bg-cyan-300/15">
+          <span className="relative grid size-12 shrink-0 place-items-center overflow-hidden rounded-2xl border border-cyan-300/35 bg-white/[.04] shadow-[inset_0_0_22px_rgba(34,211,238,.12),0_0_26px_rgba(34,211,238,.08)] transition-all duration-300 group-hover:border-cyan-200/70 group-hover:bg-cyan-300/10 max-md:size-11">
             <span className="absolute inset-1 rounded-xl border border-cyan-200/10" aria-hidden="true" />
-            <ScanIcon className="size-5" />
+            <img className="relative size-9 object-contain drop-shadow-[0_0_14px_rgba(34,211,238,.25)] max-md:size-8" src="/images/logo.png" alt="" aria-hidden="true" />
           </span>
           <span className="min-w-0">
             <span className="block text-sm font-extrabold uppercase tracking-[.2em] text-white">Verif<span className="text-cyan-300">AI</span></span>
@@ -39,7 +37,7 @@ export default function Header() {
             <span className="size-1.5 rounded-full bg-emerald-300 shadow-[0_0_12px_rgba(110,231,183,.85)]" />
             Engine Online
           </span>
-          <a className="inline-flex min-h-11 items-center justify-center rounded-full bg-cyan-300 px-5 text-sm font-extrabold text-[#021014] shadow-[0_14px_34px_rgba(34,211,238,.18)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-cyan-200 hover:shadow-[0_18px_42px_rgba(34,211,238,.28)]" href="/upload-video">
+          <a className="inline-flex min-h-11 items-center justify-center rounded-full bg-cyan-300 px-5 text-sm font-extrabold text-[#021014] shadow-[0_14px_34px_rgba(34,211,238,.18)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-cyan-200 hover:shadow-[0_18px_42px_rgba(34,211,238,.28)]" href="/upload">
             Start Detection
           </a>
         </div>
@@ -72,7 +70,7 @@ export default function Header() {
               <span className="text-cyan-300/70">&#8594;</span>
             </a>
           ))}
-          <a className="mt-2 flex min-h-12 items-center justify-center rounded-2xl bg-cyan-300 px-5 text-sm font-extrabold text-[#021014]" href="/upload-video" onClick={() => setIsOpen(false)}>
+          <a className="mt-2 flex min-h-12 items-center justify-center rounded-2xl bg-cyan-300 px-5 text-sm font-extrabold text-[#021014]" href="/upload" onClick={() => setIsOpen(false)}>
             Start Detection
           </a>
         </nav>

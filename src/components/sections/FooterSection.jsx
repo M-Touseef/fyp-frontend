@@ -5,7 +5,7 @@ const footerColumns = [
     title: 'Project',
     links: [
       { label: 'Home', href: '#top' },
-      { label: 'Upload Video', href: '#top' },
+      { label: 'Upload Video', href: '/upload' },
       { label: 'Detection Process', href: '#detection-flow' },
       { label: 'Result Dashboard', href: '#case-analysis' },
       { label: 'PDF Report', href: '#features' },

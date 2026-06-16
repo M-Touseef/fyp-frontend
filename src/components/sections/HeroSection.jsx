@@ -1,11 +1,10 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { badgeDelays, heroBadges } from '../../data/homeContent'
 import { ArrowIcon, ScanIcon } from '../shared/Icons'
 
 export default function HeroSection() {
   const [probability, setProbability] = useState(0)
   const [timelineFrame, setTimelineFrame] = useState(0)
-  const uploadRef = useRef(null)
 
   useEffect(() => {
     let frame
@@ -47,9 +46,8 @@ export default function HeroSection() {
           <p className="mt-6 max-w-[600px] text-[clamp(16px,1.5vw,18px)] leading-7 text-[#a9bac1] max-md:mx-auto max-sm:text-[15px]">Analyze videos frame by frame, detect facial manipulation, and understand the result through explainable AI heatmaps.</p>
 
           <div className="mt-[34px] flex flex-wrap gap-[13px] max-md:justify-center max-sm:grid">
-            <button className="inline-flex min-h-[54px] cursor-pointer items-center justify-center gap-2.5 rounded-full border border-transparent bg-cyan-300 px-6 text-sm font-bold text-[#021014] shadow-[0_10px_30px_rgba(21,203,228,.15),inset_0_0_0_1px_rgba(255,255,255,.25)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-cyan-200 hover:shadow-[0_13px_36px_rgba(21,203,228,.25)] max-sm:w-full" onClick={() => uploadRef.current?.click()}><ScanIcon />Upload Video</button>
+            <a className="inline-flex min-h-[54px] cursor-pointer items-center justify-center gap-2.5 rounded-full border border-transparent bg-cyan-300 px-6 text-sm font-bold text-[#021014] shadow-[0_10px_30px_rgba(21,203,228,.15),inset_0_0_0_1px_rgba(255,255,255,.25)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-cyan-200 hover:shadow-[0_13px_36px_rgba(21,203,228,.25)] max-sm:w-full" href="/upload"><ScanIcon />Upload Video</a>
             <a className="inline-flex min-h-[54px] items-center justify-center gap-2.5 rounded-full border border-slate-200/20 bg-white/[.04] px-6 text-sm font-semibold text-[#d9e9ee] backdrop-blur-xl transition-all duration-300 hover:-translate-y-0.5 hover:border-cyan-300/45 hover:bg-cyan-950/40 max-sm:w-full" href="#detection-flow">View Detection Process<ArrowIcon /></a>
-            <input ref={uploadRef} className="sr-only" type="file" accept="video/*" />
           </div>
 
           <div className="mt-7 flex flex-wrap gap-2.5 max-md:justify-center" aria-label="Detection features">
