@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import FooterSection from '../components/sections/FooterSection'
 import Header from '../components/layout/Header'
+import AnalysisProcessingPanel from '../components/upload/AnalysisProcessingPanel'
 
 const uploadPageContent = {
   title: 'Upload Video for Analysis',
@@ -55,6 +56,60 @@ const insightCards = [
   },
 ]
 
+const analysisSteps = [
+  {
+    title: 'Uploading Video',
+    description: 'The selected video is being prepared for analysis.',
+    icon: '/icons/upload-video.svg',
+  },
+  {
+    title: 'Extracting Frames',
+    description: 'Important frames are extracted from the uploaded video.',
+    icon: '/icons/film-strip.svg',
+  },
+  {
+    title: 'Detecting Faces',
+    description: 'Faces are detected in each extracted frame.',
+    icon: '/icons/face-scan.svg',
+  },
+  {
+    title: 'Cropping Face Regions',
+    description: 'Detected faces are cropped and prepared for preprocessing.',
+    icon: '/icons/frame-extraction.svg',
+  },
+  {
+    title: 'Running AI Model',
+    description: 'EfficientNet-B0 and Transformer Encoder analyze the video.',
+    icon: '/icons/ai-analysis.svg',
+  },
+  {
+    title: 'Generating Heatmaps',
+    description: 'Grad-CAM highlights regions that affected the decision.',
+    icon: '/icons/heatmap-face.svg',
+  },
+  {
+    title: 'Preparing PDF Report',
+    description: 'Frame comparisons and result summary are prepared.',
+    icon: '/icons/pdf-report.svg',
+  },
+  {
+    title: 'Finalizing Results',
+    description: 'Final prediction and confidence scores are generated.',
+    icon: '',
+  },
+]
+
+const analysisMessages = [
+  'Uploading video...',
+  'Extracting frames...',
+  'Detecting faces...',
+  'Cropping face regions...',
+  'Running AI model...',
+  'Generating heatmaps...',
+  'Preparing PDF report...',
+  'Finalizing results...',
+]
+
 const allowedExtensions = ['mp4', 'avi', 'mov']
 const maxBytes = 100 * 1024 * 1024
 
@@ -73,7 +128,9 @@ export default function UploadPage() {
   const [isDragging, setIsDragging] = useState(false)
   const [selectedFile, setSelectedFile] = useState(null)
   const [error, setError] = useState('')
-  const [isPreparing, setIsPreparing] = useState(false)
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [progress, setProgress] = useState(0)
+  const [currentStep, setCurrentStep] = useState(0)
 
   useEffect(() => {
     setIsMounted(true)
@@ -89,6 +146,39 @@ export default function UploadPage() {
       if (previewUrl) URL.revokeObjectURL(previewUrl)
     }
   }, [previewUrl])
+
+  useEffect(() => {
+    if (!isAnalyzing || !selectedFile) return undefined
+
+    const startedAt = Date.now()
+    const duration = 9800
+    const timer = window.setInterval(() => {
+      const elapsed = Date.now() - startedAt
+      const nextProgress = Math.min(Math.round((elapsed / duration) * 100), 100)
+      const nextStep = Math.min(Math.floor((nextProgress / 100) * analysisSteps.length), analysisSteps.length - 1)
+
+      setProgress(nextProgress)
+      setCurrentStep(nextStep)
+
+      if (nextProgress >= 100) {
+        window.clearInterval(timer)
+        window.sessionStorage.setItem(
+          'analysisResult',
+          JSON.stringify({
+            videoName: selectedFile.name,
+            format: getExtension(selectedFile.name).toUpperCase(),
+            size: formatBytes(selectedFile.size),
+            confidence: 87,
+          }),
+        )
+        window.setTimeout(() => {
+          window.location.href = '/results'
+        }, 700)
+      }
+    }, 260)
+
+    return () => window.clearInterval(timer)
+  }, [isAnalyzing, selectedFile])
 
   function validateAndSetFile(file) {
     if (!file) {
@@ -110,6 +200,9 @@ export default function UploadPage() {
     }
 
     setSelectedFile(file)
+    setIsAnalyzing(false)
+    setProgress(0)
+    setCurrentStep(0)
     setError('')
   }
 
@@ -126,7 +219,9 @@ export default function UploadPage() {
   function removeVideo() {
     setSelectedFile(null)
     setError('')
-    setIsPreparing(false)
+    setIsAnalyzing(false)
+    setProgress(0)
+    setCurrentStep(0)
     if (inputRef.current) inputRef.current.value = ''
   }
 
@@ -137,10 +232,9 @@ export default function UploadPage() {
     }
 
     setError('')
-    setIsPreparing(true)
-    window.setTimeout(() => {
-      window.location.href = '/processing'
-    }, 900)
+    setProgress(0)
+    setCurrentStep(0)
+    setIsAnalyzing(true)
   }
 
   const fileFormat = selectedFile ? getExtension(selectedFile.name).toUpperCase() : ''
@@ -162,7 +256,7 @@ export default function UploadPage() {
             <p className="mt-5 max-w-[760px] text-[clamp(15px,1.5vw,18px)] leading-7 text-[#a9bac1]">{uploadPageContent.subtitle}</p>
           </div>
 
-          <div className="mt-11 grid grid-cols-[minmax(0,1.08fr)_minmax(340px,.92fr)] gap-7 max-lg:grid-cols-1">
+          {!isAnalyzing && <div className="mt-11 grid grid-cols-[minmax(0,1.08fr)_minmax(340px,.92fr)] gap-7 max-lg:grid-cols-1">
             <section className={`rounded-[30px] border border-white/10 bg-white/[.045] p-5 shadow-[0_28px_80px_rgba(0,0,0,.38),inset_0_1px_0_rgba(255,255,255,.06)] backdrop-blur-2xl transition-all delay-100 duration-700 max-sm:rounded-3xl max-sm:p-4 ${isMounted ? 'translate-x-0 opacity-100' : '-translate-x-8 opacity-0'}`} aria-label="Upload video">
               <div
                 className={`group/upload relative grid min-h-[360px] place-items-center overflow-hidden rounded-[24px] border-2 border-dashed p-6 text-center transition-all duration-300 max-sm:min-h-[310px] ${isDragging ? 'border-cyan-200 bg-cyan-300/[.08] shadow-[0_0_45px_rgba(34,211,238,.18)]' : 'border-cyan-300/25 bg-[#071116]/72 hover:border-cyan-200/70 hover:bg-cyan-300/[.045]'}`}
@@ -218,11 +312,11 @@ export default function UploadPage() {
               )}
 
               <div className="mt-6 flex flex-wrap justify-end gap-3 max-sm:grid max-sm:grid-cols-1">
-                <button className="inline-flex min-h-12 items-center justify-center rounded-full border border-white/12 bg-white/[.045] px-5 text-sm font-bold text-slate-200 transition-all duration-300 hover:border-red-300/35 hover:bg-red-400/10 hover:text-red-100 disabled:cursor-not-allowed disabled:opacity-45" type="button" disabled={!selectedFile || isPreparing} onClick={removeVideo}>
+                <button className="inline-flex min-h-12 items-center justify-center rounded-full border border-white/12 bg-white/[.045] px-5 text-sm font-bold text-slate-200 transition-all duration-300 hover:border-red-300/35 hover:bg-red-400/10 hover:text-red-100 disabled:cursor-not-allowed disabled:opacity-45" type="button" disabled={!selectedFile} onClick={removeVideo}>
                   Remove Video
                 </button>
-                <button className={`inline-flex min-h-12 items-center justify-center rounded-full px-6 text-sm font-extrabold transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-60 ${selectedFile ? 'bg-cyan-300 text-[#021014] shadow-[0_16px_38px_rgba(34,211,238,.22)] hover:-translate-y-0.5 hover:bg-cyan-200' : 'border border-white/12 bg-white/[.045] text-slate-400 hover:border-cyan-300/30 hover:bg-cyan-300/10 hover:text-cyan-100'}`} type="button" disabled={isPreparing} onClick={analyzeVideo}>
-                  {isPreparing ? 'Preparing Analysis...' : 'Analyze Video'}
+                <button className={`inline-flex min-h-12 items-center justify-center rounded-full px-6 text-sm font-extrabold transition-all duration-300 ${selectedFile ? 'bg-cyan-300 text-[#021014] shadow-[0_16px_38px_rgba(34,211,238,.22)] hover:-translate-y-0.5 hover:bg-cyan-200' : 'border border-white/12 bg-white/[.045] text-slate-400 hover:border-cyan-300/30 hover:bg-cyan-300/10 hover:text-cyan-100'}`} type="button" onClick={analyzeVideo}>
+                  Analyze Video
                 </button>
               </div>
             </section>
@@ -247,9 +341,21 @@ export default function UploadPage() {
                 ))}
               </ol>
             </aside>
-          </div>
+          </div>}
 
-          <div className={`mt-7 grid grid-cols-3 gap-5 transition-all delay-300 duration-700 max-lg:grid-cols-1 ${isMounted ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}>
+          {isAnalyzing && (
+            <div className="mt-11">
+              <AnalysisProcessingPanel
+                video={selectedFile}
+                progress={progress}
+                currentStep={currentStep}
+                steps={analysisSteps}
+                currentMessage={analysisMessages[currentStep] || 'Finalizing results...'}
+              />
+            </div>
+          )}
+
+          {!isAnalyzing && <div className={`mt-7 grid grid-cols-3 gap-5 transition-all delay-300 duration-700 max-lg:grid-cols-1 ${isMounted ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}>
             {insightCards.map((card) => (
               <article className="rounded-[24px] border border-white/10 bg-white/[.04] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,.05)] backdrop-blur-xl" key={card.title}>
                 <img className="size-10" src={card.icon} alt="" aria-hidden="true" />
@@ -257,7 +363,7 @@ export default function UploadPage() {
                 <p className="mt-2 text-sm leading-6 text-[#8ea2aa]">{card.description}</p>
               </article>
             ))}
-          </div>
+          </div>}
         </section>
       </main>
       <FooterSection />

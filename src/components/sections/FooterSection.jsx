@@ -1,5 +1,3 @@
-import { ScanIcon } from '../shared/Icons'
-
 const footerColumns = [
   {
     title: 'Project',
@@ -33,11 +31,14 @@ export default function FooterSection() {
       <div className="relative mx-auto w-[min(1240px,calc(100%-48px))] pt-20 max-md:w-[min(680px,calc(100%-30px))] max-md:pt-16">
         <div className="grid grid-cols-[1.5fr_.75fr_1fr_1fr] gap-12 pb-16 max-lg:grid-cols-2 max-md:grid-cols-1 max-md:gap-10">
           <div className="max-w-[390px]">
-            <a className="inline-flex items-center gap-3" href="#top" aria-label="Deepfake Detection System home">
-              <span className="grid size-11 place-items-center rounded-2xl border border-cyan-300/30 bg-cyan-300/[.065] text-cyan-200 shadow-[inset_0_0_20px_rgba(33,216,238,.06)]">
-                <ScanIcon className="size-6" />
+            <a className="inline-flex items-center gap-3" href="#top" aria-label="VerifAI video forensics home">
+              <span className="grid size-12 place-items-center rounded-2xl border border-cyan-300/30 bg-cyan-300/[.065] shadow-[inset_0_0_20px_rgba(33,216,238,.06)]">
+                <img className="size-9 object-contain drop-shadow-[0_0_14px_rgba(34,211,238,.3)]" src="/images/verifai-logo.svg" alt="" aria-hidden="true" />
               </span>
-              <span className="text-[17px] font-bold tracking-[-.02em] text-white">Deepfake Detection System</span>
+              <span>
+                <span className="block text-[17px] font-black uppercase tracking-[.14em] text-white">Verif<span className="text-cyan-300">AI</span></span>
+                <span className="mt-1 block text-[11px] font-semibold uppercase tracking-[.12em] text-slate-500">AI Video Forensics</span>
+              </span>
             </a>
             <p className="mt-6 text-[13px] leading-6 text-[#83969e]">
               An AI-based video analysis system that detects deepfake manipulation, explains suspicious facial regions using heatmaps, and generates downloadable PDF reports.

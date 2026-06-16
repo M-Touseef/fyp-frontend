@@ -13,14 +13,14 @@ export default function Header() {
     <header className="fixed inset-x-0 top-0 z-[100] border-b border-white/10 bg-[#05090c]/75 text-[#f4fbff] shadow-[0_18px_45px_rgba(0,0,0,.22)] backdrop-blur-2xl">
       <div className="absolute inset-x-0 bottom-0 h-px bg-[linear-gradient(90deg,transparent,rgba(34,211,238,.55),transparent)]" aria-hidden="true" />
       <div className="mx-auto flex h-[82px] w-[min(1240px,calc(100%-48px))] items-center justify-between gap-6 max-md:h-[72px] max-md:w-[min(680px,calc(100%-30px))]">
-        <a className="group flex min-w-0 items-center gap-3" href="/" aria-label="Deepfake Detection System home">
-          <span className="relative grid size-12 shrink-0 place-items-center overflow-hidden rounded-2xl border border-cyan-300/35 bg-white/[.04] shadow-[inset_0_0_22px_rgba(34,211,238,.12),0_0_26px_rgba(34,211,238,.08)] transition-all duration-300 group-hover:border-cyan-200/70 group-hover:bg-cyan-300/10 max-md:size-11">
+        <a className="group flex min-w-0 items-center gap-3.5" href="/" aria-label="VerifAI video forensics home">
+          <span className="relative grid size-14 shrink-0 place-items-center overflow-hidden rounded-2xl border border-cyan-300/35 bg-[#071116] shadow-[inset_0_0_24px_rgba(34,211,238,.14),0_0_28px_rgba(34,211,238,.12)] transition-all duration-300 group-hover:border-cyan-200/70 group-hover:bg-cyan-300/10 max-md:size-12">
             <span className="absolute inset-1 rounded-xl border border-cyan-200/10" aria-hidden="true" />
-            <img className="relative size-9 object-contain drop-shadow-[0_0_14px_rgba(34,211,238,.25)] max-md:size-8" src="/images/logo.png" alt="" aria-hidden="true" />
+            <img className="relative size-11 object-contain drop-shadow-[0_0_18px_rgba(34,211,238,.38)] max-md:size-9" src="/images/verifai-logo.svg" alt="" aria-hidden="true" />
           </span>
           <span className="min-w-0">
-            <span className="block text-sm font-extrabold uppercase tracking-[.2em] text-white">Verif<span className="text-cyan-300">AI</span></span>
-            <span className="block truncate text-[11px] font-medium text-slate-400">Deepfake Detection System</span>
+            <span className="block text-[18px] font-black uppercase leading-none tracking-[.18em] text-white max-md:text-[15px]">Verif<span className="text-cyan-300">AI</span></span>
+            <span className="mt-1 block truncate text-[11px] font-semibold uppercase tracking-[.11em] text-slate-400 max-sm:max-w-[150px]">AI Video Forensics</span>
           </span>
         </a>
 
